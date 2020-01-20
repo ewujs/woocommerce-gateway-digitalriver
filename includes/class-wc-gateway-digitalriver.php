@@ -1,6 +1,11 @@
 <?php
 defined( 'ABSPATH' ) or exit;
 
+/**
+ * WC_Gateway_DigitalRiver class.
+ *
+ * @extends WC_Payment_Gateway
+ */
 class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
   /**
 	 * Is test mode active?
@@ -15,22 +20,24 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
   public function __construct() {
   
     $this->id                 = 'digitalriver';
-    $this->has_fields         = false;
+    $this->has_fields         = true;
     $this->method_title       = __( 'Digital River', 'woocommerce_gateway_digitalriver' );
-    $this->method_description = __( 'Digital River works by adding payment fields on the checkout and then sending the details to Digital River for verification.', 'woocommerce-gateway-stripe' );
+    $this->method_description = __( 'Digital River works by adding payment fields on the checkout and then sending the details to Digital River for verification.', 'woocommerce-gateway-digitalriver' );
     
-    // Load the settings.
-    $this->init_form_fields();
+		// Load the form fields.
+		$this->init_form_fields();
+		
+		// Load the settings.
     $this->init_settings();
     
     // Define user set variables
-    $this->title        = $this->get_option( 'title' );
-    $this->description  = $this->get_option( 'description' );
-    $this->enabled      = $this->get_option( 'enabled' );
-    $this->testmode     = 'yes' === $this->get_option( 'testmode' );
-    $this->api_key      = $this->testmode ? $this->get_option( 'test_api_key' ) : $this->get_option( 'api_key' );
-    $this->saved_cards  = 'yes' === $this->get_option( 'saved_cards' );
-    $this->instructions = $this->get_option( 'instructions', $this->description );
+    $this->title        		= $this->get_option( 'title' );
+    $this->description  		= $this->get_option( 'description' );
+    $this->enabled      		= $this->get_option( 'enabled' );
+    $this->testmode     		= $this->get_option( 'testmode' ) === 'yes';
+    $this->api_key      		= $this->testmode ? $this->get_option( 'test_api_key' ) : $this->get_option( 'api_key' );
+		$this->instructions			= $this->get_option( 'instructions', $this->description );
+		$this->payment_request	= $this->get_option( 'payment_request', 'yes' ) === 'yes';
     
     // Actions
     add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
@@ -45,7 +52,7 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
   /**
 	 * Checks if keys are set.
 	 *
-	 * @since 4.0.6
+	 * @since 1.0.0
 	 * @return bool
 	 */
 	public function are_keys_set() {
@@ -54,6 +61,13 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		}
 
 		return true;
+	}
+	
+	/**
+   * Initialize Gateway Settings Form Fields
+   */
+  public function init_form_fields() {
+    $this->form_fields = require( dirname( __FILE__ ) . '/admin/digitalriver-settings.php' );
   }
   
   /**
@@ -61,7 +75,6 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 	 */
 	public function payment_fields() {
 		$user                 = wp_get_current_user();
-		$display_tokenization = $this->supports( 'tokenization' ) && is_checkout() && $this->saved_cards;
 		$total                = WC()->cart->total;
 		$user_email           = '';
 		$description          = $this->get_description();
@@ -96,25 +109,14 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		>';
 
 		if ( $this->testmode ) {
-			/* translators: link to Stripe testing page */
-			$description .= ' ' . sprintf( __( 'TEST MODE ENABLED. In test mode, you can use the card number 4444222233331111 with CVC 123 and a valid expiration date or check the <a href="%s" target="_blank">Testing Digital River documentation</a> for more card numbers.', 'woocommerce-gateway-digitalriver' ), '' );
+			$description .= ' ' . sprintf( __( 'TEST MODE ENABLED. In test mode, you can use the card number 4444222233331111 with CVC 123 and a valid expiration date', 'woocommerce-gateway-digitalriver' ), '' );
 		}
 
 		$description = trim( $description );
 
 		echo apply_filters( 'wc_digitalriver_description', wpautop( wp_kses_post( $description ) ), $this->id ); // wpcs: xss ok.
 
-		if ( $display_tokenization ) {
-			$this->tokenization_script();
-			$this->saved_payment_methods();
-		}
-
 		$this->elements_form();
-
-		if ( apply_filters( 'wc_digitalriver_display_save_payment_method_checkbox', $display_tokenization ) && ! is_add_payment_method_page() && ! isset( $_GET['change_payment_method'] ) ) { // wpcs: csrf ok.
-
-			$this->save_payment_method_checkbox();
-		}
 
 		do_action( 'wc_digitalriver_cards_payment_fields', $this->id );
 
@@ -124,10 +126,10 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
   }
 
   /**
-	 * Renders the Stripe elements form.
+	 * Renders the DR.js elements form.
 	 *
-	 * @since 4.0.0
-	 * @version 4.0.0
+	 * @since 1.0.0
+	 * @version 1.0.0
 	 */
 	public function elements_form() {
 		?>
@@ -138,26 +140,24 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
         <label for="drjs-card-element"><?php esc_html_e( 'Card Number', 'woocommerce-gateway-digitalriver' ); ?> <span class="required">*</span></label>
         <div class="drjs-card-group">
           <div id="drjs-card-element" class="wc-drjs-elements-field">
-          <!-- a Stripe Element will be inserted here. -->
+          	<!-- a DR.js Element will be inserted here. -->
           </div>
-
           <i class="drjs-credit-card-brand drjs-card-brand" alt="Credit Card"></i>
         </div>
       </div>
 
       <div class="form-row form-row-first">
         <label for="drjs-exp-element"><?php esc_html_e( 'Expiry Date', 'woocommerce-gateway-digitalriver' ); ?> <span class="required">*</span></label>
-
         <div id="drjs-exp-element" class="wc-drjs-elements-field">
-        <!-- a Stripe Element will be inserted here. -->
+        	<!-- a DR.js Element will be inserted here. -->
         </div>
       </div>
 
       <div class="form-row form-row-last">
         <label for="drjs-cvc-element"><?php esc_html_e( 'Card Code (CVC)', 'woocommerce-gateway-digitalriver' ); ?> <span class="required">*</span></label>
-      <div id="drjs-cvc-element" class="wc-drjs-elements-field">
-      <!-- a Stripe Element will be inserted here. -->
-      </div>
+				<div id="drjs-cvc-element" class="wc-drjs-elements-field">
+					<!-- a DR.js Element will be inserted here. -->
+				</div>
       </div>
       <div class="clear"></div>
 
@@ -169,11 +169,27 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		</fieldset>
 		<?php
 	}
-  
+	
+	/**
+	 * Load admin scripts.
+	 *
+	 * @since 1.0.0
+	 * @version 1.0.0
+	 */
+	public function admin_scripts() {
+		if ( 'woocommerce_page_wc-settings' !== get_current_screen()->id ) {
+			return;
+		}
+
+		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '';
+
+		wp_enqueue_script( 'woocommerce_digitalriver_admin', plugins_url( 'assets/js/digitalriver-admin' . $suffix . '.js', WC_DIGITALRIVER_MAIN_FILE ), array(), WC_DIGITALRIVER_VERSION, true );
+	}
+
   /**
 	 * Payment_scripts function.
 	 *
-	 * Outputs scripts used for stripe payment
+	 * Outputs scripts used for Digital River payment
 	 *
 	 * @since 1.0.0
 	 * @version 1.0.0
@@ -184,7 +200,7 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		}
 
 		// If Digital River is not enabled bail.
-		if ( 'no' === $this->enabled ) {
+		if ( $this->enabled === 'no' ) {
 			return;
 		}
 
@@ -195,7 +211,7 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 
 		// If no SSL bail.
 		if ( ! $this->testmode && ! is_ssl() ) {
-			//return;
+			return;
 		}
 
 		//$current_theme = wp_get_theme();
@@ -205,7 +221,6 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		wp_register_style( 'digitalriver_styles', plugins_url( 'assets/css/digitalriver-styles.css', WC_DIGITALRIVER_MAIN_FILE ), array(), WC_DIGITALRIVER_VERSION );
 		wp_enqueue_style( 'digitalriver_styles' );
 
-    //wp_register_script( 'digitalriverJs', 'https://js.digitalriverws.com/v1/DigitalRiver.js', '', null, true );
     wp_enqueue_script( 'digitalriverJs', 'https://js.digitalriverws.com/v1/DigitalRiver.js' );
     wp_register_script( 'woocommerce_digitalriver', plugins_url( 'assets/js/digitalriver' . $suffix . '.js', WC_DIGITALRIVER_MAIN_FILE ), array( 'jquery-payment', 'digitalriverJs' ), WC_DIGITALRIVER_VERSION, true );
 
@@ -250,31 +265,6 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
 		$this->tokenization_script();
 		wp_enqueue_script( 'woocommerce_digitalriver' );
   }
-  
-  /**
-	 * Load admin scripts.
-	 *
-	 * @since 3.1.0
-	 * @version 3.1.0
-	 */
-	public function admin_scripts() {
-		if ( 'woocommerce_page_wc-settings' !== get_current_screen()->id ) {
-			return;
-		}
-
-		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '';
-
-		wp_enqueue_script( 'woocommerce_digitalriver_admin', plugins_url( 'assets/js/digitalriver-admin' . $suffix . '.js', WC_DIGITALRIVER_MAIN_FILE ), array(), WC_DIGITALRIVER_VERSION, true );
-	}
-
-
-  /**
-   * Initialize Gateway Settings Form Fields
-   */
-  public function init_form_fields() {
-    $this->form_fields = require( dirname( __FILE__ ) . '/admin/digitalriver-settings.php' );
-  }
-
 
   /**
    * Output for the order received page.
@@ -322,9 +312,6 @@ class WC_Gateway_DigitalRiver extends WC_Payment_Gateway {
     if ( isset( WC()->cart ) ) {
       WC()->cart->empty_cart();
     }
-
-    // Unlock the order.
-		$this->unlock_order_payment( $order );
 
     // Return thank you page redirect
     return array(

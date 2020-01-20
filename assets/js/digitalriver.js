@@ -29,7 +29,7 @@ jQuery(function($) {
 		},
 
 		/**
-		 * Unmounts all Stripe elements when the checkout page is being updated.
+		 * Unmounts all DR.js elements when the checkout page is being updated.
 		 */
 		unmountElements: function() {
 			drjs_card.unmount('drjs-card-element');
@@ -51,7 +51,7 @@ jQuery(function($) {
 		},
 
 		/**
-		 * Creates all Stripe elements that will be used to enter cards or IBANs.
+		 * Creates all DR.js elements that will be used to enter cards or IBANs.
 		 */
 		createElements: function() {
 			var options = {
@@ -325,7 +325,7 @@ jQuery(function($) {
 		/**
 		 * Handles responses, based on source object.
 		 *
-		 * @param {Object} response The `stripe.createSource` response.
+		 * @param {Object} response The `drjs.createSource` response.
 		 */
 		sourceResponse: function( response ) {
 			wc_digitalriver_form.reset();
@@ -349,11 +349,6 @@ jQuery(function($) {
 				return true;
 			}
 
-			// If a source is already in place, submit the form as usual.
-			if (wc_digitalriver_form.isStripeSaveCardChosen() || wc_digitalriver_form.hasSource()) {
-				return true;
-			}
-
 			wc_digitalriver_form.block();
 			wc_digitalriver_form.createSource();
 
@@ -368,17 +363,17 @@ jQuery(function($) {
 		},
 
 		/**
-		 * Displays stripe-related errors.
+		 * Displays drjs-related errors.
 		 *
 		 * @param {Event}  e      The jQuery event.
-		 * @param {Object} result The result of Stripe call.
+		 * @param {Object} result The result of DR.js call.
 		 */
 		onError: function( e, result ) {
 
 		},
 
 		/**
-		 * Removes all Stripe errors and hidden fields with IDs from the form.
+		 * Removes all DR.js errors and hidden fields with IDs from the form.
 		 */
 		reset: function() {
 			$('.wc-digitalriver-error .drjs-source').remove();

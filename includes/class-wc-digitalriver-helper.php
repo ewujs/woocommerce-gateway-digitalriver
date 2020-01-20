@@ -43,7 +43,7 @@ class WC_DigitalRiver_Helper {
 	}
 
 	/**
-	 * Localize Stripe messages based on code
+	 * Localize Digital River messages based on code
 	 *
 	 * @since 3.0.6
 	 * @version 3.0.6
@@ -119,7 +119,7 @@ class WC_DigitalRiver_Helper {
 	/**
 	 * Sanitize statement descriptor text.
 	 *
-	 * Stripe requires max of 22 characters and no
+	 * Digital River requires max of 22 characters and no
 	 * special characters with ><"'.
 	 *
 	 * @since 1.0.0

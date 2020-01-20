@@ -12,7 +12,6 @@
 defined( 'ABSPATH' ) or exit;
 
 function woocommerce_digitalriver_missing_wc_notice() {
-	/* translators: 1. URL link. */
 	echo '<div class="error"><p><strong>' . sprintf( esc_html__( 'Digital River requires WooCommerce to be installed and active. You can download %s here.', 'woocommerce-gateway-digitalriver' ), '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>' ) . '</strong></p></div>';
 }
 
@@ -28,6 +27,8 @@ function woocommerce_gateway_digitalriver_init() {
 	if ( ! class_exists( 'WC_DigitalRiver' ) ) :
 		define( 'WC_DIGITALRIVER_VERSION', '1.0.0' );
 		define( 'WC_DIGITALRIVER_MAIN_FILE', __FILE__ );
+		define( 'WC_DIGITALRIVER_PLUGIN_URL', untrailingslashit( plugins_url( basename( plugin_dir_path( __FILE__ ) ), basename( __FILE__ ) ) ) );
+		define( 'WC_DIGITALRIVER_PLUGIN_PATH', untrailingslashit( plugin_dir_path( __FILE__ ) ) );
 
 		class WC_DigitalRiver {
 
@@ -42,7 +43,7 @@ function woocommerce_gateway_digitalriver_init() {
 			 * @return Singleton The *Singleton* instance.
 			 */
 			public static function get_instance() {
-				if ( null === self::$instance ) {
+				if ( self::$instance === null ) {
 					self::$instance = new self();
 				}
 				return self::$instance;
@@ -73,43 +74,18 @@ function woocommerce_gateway_digitalriver_init() {
 				$this->init();
 			}
 
+			/**
+			 * Init the plugin after plugins_loaded so environment variables are set.
+			 *
+			 * @since 1.0.0
+			 * @version 1.0.0
+			 */
 			public function init() {
 				require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-digitalriver.php';
 				require_once dirname( __FILE__ ) . '/includes/class-wc-digitalriver-helper.php';
 
 				add_filter( 'woocommerce_payment_gateways', array( $this, 'add_digitalriver_gateways' ) );
 				add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( $this, 'plugin_action_links' ) );
-
-				if ( version_compare( WC_VERSION, '3.4', '<' ) ) {
-					add_filter( 'woocommerce_get_sections_checkout', array( $this, 'filter_gateway_order_admin' ) );
-				}
-			}
-
-			/**
-			 * Add the gateway to WC Available Gateways
-			 * 
-			 * @since 1.0.0
-			 * @param array $gateways all available WC gateways
-			 * @return array $gateways all WC gateways + Digital River gateway
-			 */
-			public function add_digitalriver_gateways( $gateways ) {
-				$gateways[] = 'WC_Gateway_DigitalRiver';
-				return $gateways;
-			}
-
-			/**
-			 * Adds plugin page links
-			 * 
-			 * @since 1.0.0
-			 * @param array $links all plugin links
-			 * @return array $links all plugin links + Digital River links
-			 */
-			public function plugin_action_links( $links ) {
-				$plugin_links = array(
-					'<a href="admin.php?page=wc-settings&tab=checkout&section=digitalriver">' . esc_html__( 'Settings', 'woocommerce-gateway-digitalriver' ) . '</a>',
-					'<a href="https://docs.woocommerce.com/document/digitalriver/">' . esc_html__( 'Docs', 'woocommerce-gateway-digitalriver' ) . '</a>'
-				);
-				return array_merge( $plugin_links, $links );
 			}
 
 			/**
@@ -146,17 +122,30 @@ function woocommerce_gateway_digitalriver_init() {
 			}
 
 			/**
-			 * Modifies the order of the gateways displayed in admin.
-			 *
-			 * @since 4.0.0
-			 * @version 4.0.0
+			 * Adds plugin page links
+			 * 
+			 * @since 1.0.0
+			 * @param array $links all plugin links
+			 * @return array $links all plugin links + Digital River links
 			 */
-			public function filter_gateway_order_admin( $sections ) {
-				unset( $sections['digitalriver'] );
+			public function plugin_action_links( $links ) {
+				$plugin_links = array(
+					'<a href="admin.php?page=wc-settings&tab=checkout&section=digitalriver">' . esc_html__( 'Settings', 'woocommerce-gateway-digitalriver' ) . '</a>',
+					'<a href="https://docs.woocommerce.com/document/digitalriver/">' . esc_html__( 'Docs', 'woocommerce-gateway-digitalriver' ) . '</a>'
+				);
+				return array_merge( $plugin_links, $links );
+			}
 
-				$sections['digitalriver'] = 'Digital River';
-
-				return $sections;
+			/**
+			 * Add the gateway to WC Available Gateways
+			 * 
+			 * @since 1.0.0
+			 * @param array $gateways all available WC gateways
+			 * @return array $gateways all WC gateways + Digital River gateway
+			 */
+			public function add_digitalriver_gateways( $gateways ) {
+				$gateways[] = 'WC_Gateway_DigitalRiver';
+				return $gateways;
 			}
 		}
 

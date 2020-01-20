@@ -63,28 +63,11 @@ return apply_filters(
 		),
 		'payment_request'               => array(
 			'title'       => __( 'Payment Request Buttons', 'woocommerce-gateway-digitalriver' ),
-			/* translators: 1) br tag 2) opening anchor tag 3) closing anchor tag */
 			'label'       => sprintf( __( 'Enable Payment Request Buttons. (Apple Pay/Google Pay Payment Request API) %1$sBy using Apple Pay, you agree to %2$s and %3$s\'s terms of service.', 'woocommerce-gateway-digitalriver' ), '<br />', '<a href="#" target="_blank">Digital River</a>', '<a href="https://developer.apple.com/apple-pay/acceptable-use-guidelines-for-websites/" target="_blank">Apple</a>' ),
 			'type'        => 'checkbox',
 			'description' => __( 'If enabled, users will be able to pay using Apple Pay or Payment Request API if supported by the browser.', 'woocommerce-gateway-digitalriver' ),
 			'default'     => 'yes',
 			'desc_tip'    => true,
-		),
-		'saved_cards'                   => array(
-			'title'       => __( 'Saved Cards', 'woocommerce-gateway-digitalriver' ),
-			'label'       => __( 'Enable Payment via Saved Cards', 'woocommerce-gateway-digitalriver' ),
-			'type'        => 'checkbox',
-			'description' => __( 'If enabled, users will be able to pay with a saved card during checkout. Card details are saved on Digital River servers, not on your store.', 'woocommerce-gateway-digitalriver' ),
-			'default'     => 'yes',
-			'desc_tip'    => true,
-    ),
-    'logging'                       => array(
-			'title'       => __( 'Logging', 'woocommerce-gateway-digitalriver' ),
-			'label'       => __( 'Log debug messages', 'woocommerce-gateway-digitalriver' ),
-			'type'        => 'checkbox',
-			'description' => __( 'Save debug messages to the WooCommerce System Status log.', 'woocommerce-gateway-digitalriver' ),
-			'default'     => 'no',
-			'desc_tip'    => true,
-		),
+		)
 	)
 );
